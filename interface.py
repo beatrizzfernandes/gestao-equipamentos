@@ -4,8 +4,6 @@ from tkinter import ttk, messagebox
 import json
 import os
 from datetime import datetime, timedelta
-import smtplib
-from email.mime.text import MIMEText
 import re
 from tkcalendar import DateEntry
 
@@ -44,11 +42,11 @@ class App:
         
         # Configurações de e-mail
         self.email_config = {
-            'servidor': 'smtp.gmail.com',
-            'porta': 587,
-            'usuario': 'sistema.emprestimos@example.com',
-            'senha': 'senha123',
-            'from': 'sistema.emprestimos@example.com'
+        'servidor': 'smtp.gmail.com',
+        'porta': 587,
+        'usuario': 'seuemail@gmail.com',  # Seu e-mail completo
+        'senha': 'senha_de_16_caracteres',  # Senha de App gerada
+        'from': 'seuemail@gmail.com'
         }
         
         self.usuario_atual = None
@@ -323,16 +321,26 @@ class App:
     def reservar_equipamento(self):
         janela = tk.Toplevel(self.root)
         janela.title("Nova Reserva")
-        
-        # Lista equipamentos disponíveis
+    
+        # Listar equipamentos disponíveis
         disponiveis = [eq for eq in self.equipamentos if eq['disponivel']]
-        
+    
         ttk.Label(janela, text="Selecione o equipamento:").pack(pady=5)
         self.combo_equip = ttk.Combobox(janela, values=[eq['nome'] for eq in disponiveis])
         self.combo_equip.pack(pady=5)
 
         ttk.Label(janela, text="Data de Devolução:").pack(pady=5)
-        self.cal_devolucao = ttk.DateEntry(janela, datepattern='dd/mm/yyyy')
+    
+        # Widget de calendário corrigido
+        self.cal_devolucao = DateEntry(
+            janela,
+            date_pattern='dd/mm/yyyy',  # Formato brasileiro
+            locale='pt_BR',             # Configuração regional
+            width=12,
+            background='darkblue',
+            foreground='white',
+            borderwidth=2
+        )
         self.cal_devolucao.pack(pady=5)
 
         ttk.Button(janela, text="Confirmar", command=lambda: self.processar_reserva(janela)).pack(pady=10)
@@ -340,9 +348,15 @@ class App:
     def processar_reserva(self, janela):
         equip_nome = self.combo_equip.get()
         equip = next((eq for eq in self.equipamentos if eq['nome'] == equip_nome), None)
-        
+    
         if not equip:
             messagebox.showerror("Erro", "Selecione um equipamento válido!")
+            return
+
+        try:
+            data_devolucao = self.cal_devolucao.get_date().strftime("%d/%m/%Y")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Data inválida: {str(e)}")
             return
 
         nova_reserva = {
@@ -350,25 +364,43 @@ class App:
             'equipamento_id': equip['id'],
             'usuario': self.usuario_atual['email'],
             'data': datetime.now().strftime("%d/%m/%Y %H:%M"),
-            'devolucao': self.cal_devolucao.entry.get(),
+            'devolucao': data_devolucao,
             'status': 'reservado'
         }
-        
+    
+        # Verificar se já existe reserva ativa para o equipamento
+        reserva_ativa = any(
+            r for r in self.reservas 
+            if r['equipamento_id'] == equip['id'] 
+            and r['status'] in ['reservado', 'emprestado']
+        )
+    
+        if reserva_ativa:
+            messagebox.showerror("Erro", "Este equipamento já está reservado!")
+            return
+
         equip['disponivel'] = False
         self.reservas.append(nova_reserva)
+    
+        # Salvar alterações nos arquivos
         DataHandler.salvar_dados('reservas.json', self.reservas)
         DataHandler.salvar_dados('equipamentos.json', self.equipamentos)
+    
+        # Feedback visual
+        messagebox.showinfo("Sucesso", 
+            f"Reserva confirmada!\nEquipamento: {equip['nome']}\nDevolução: {data_devolucao}")
         
-        # Envia e-mail de confirmação
-        mensagem = f"""
-        Reserva confirmada:
-        Equipamento: {equip['nome']}
-        Data Devolução: {nova_reserva['devolucao']}
-        """
-        self.enviar_email(self.usuario_atual['email'], "Confirmação de Reserva", mensagem)
-        
-        messagebox.showinfo("Sucesso", "Reserva realizada com sucesso!")
+        # Na linha onde o e-mail é enviado:
+        self.enviar_email(
+            self.usuario_atual['email'],
+            "Confirmação de Reserva",
+            f"Reserva realizada para {equip['nome']}",
+            mostrar_popup=True  # Popup habilitado aqui
+)
+    
+        # Atualizar interface e fechar janela
         janela.destroy()
+        self.tela_gestao_reservas()  # Recarrega a tela de gestão
 
     # ----------------------------------------------
     # Métodos de Empréstimo
@@ -418,7 +450,12 @@ class App:
         Equipamento: {equip['nome']}
         Data Devolução: {novo_emprestimo['devolucao']}
         """
-        self.enviar_email(self.usuario_atual['email'], "Confirmação de Empréstimo", mensagem)
+        self.enviar_email(
+            self.usuario_atual['email'],
+            "Confirmação de Empréstimo",
+            f"Empréstimo realizado para {equip['nome']}",
+            mostrar_popup=True  # Popup habilitado aqui
+)
         
         messagebox.showinfo("Sucesso", "Empréstimo realizado com sucesso!")
         janela.destroy()
@@ -480,8 +517,9 @@ class App:
             self.enviar_email(
                 self.usuario_atual['email'],
                 "Atraso na Devolução",
-                f"Multa aplicada: R${dias_atraso * 10:.2f}"
-            )
+                f"Multa aplicada: R${dias_atraso * 10:.2f}",
+                mostrar_popup=False  # Popup desabilitado
+)
         else:
             mensagem = "Devolução realizada com sucesso!"
         
@@ -515,7 +553,12 @@ class App:
         Equipamento: {equip['nome']}
         Data Limite: {reserva['devolucao']}
         """
-        self.enviar_email(reserva['usuario'], "Lembrete de Devolução", mensagem)
+        self.enviar_email(
+            reserva['usuario'],
+            "Lembrete de Devolução",
+            mensagem,
+            mostrar_popup=False  # Popup desabilitado
+)
 
     def obter_nome_equipamento(self, equip_id):
         for eq in self.equipamentos:
@@ -523,22 +566,27 @@ class App:
                 return eq['nome']
         return "Equipamento Não Encontrado"
 
-    def enviar_email(self, destinatario, assunto, mensagem):
-        try:
-            msg = MIMEText(mensagem, 'plain', 'utf-8')
-            msg['Subject'] = assunto
-            msg['From'] = self.email_config['from']
-            msg['To'] = destinatario
-
-            with smtplib.SMTP(self.email_config['servidor'], self.email_config['porta']) as server:
-                server.starttls()
-                server.login(self.email_config['usuario'], self.email_config['senha'])
-                server.sendmail(msg['From'], destinatario, msg.as_string())
-            return True
-        except Exception as e:
-            print(f"Erro no envio de e-mail: {str(e)}")
-            return False
-
+    def enviar_email(self, destinatario, assunto, mensagem, mostrar_popup=False):  # Alterado padrão para False
+        """Simula o envio de e-mail com controle de exibição"""
+        mensagem_simulada = f"""
+        [SIMULAÇÃO] E-mail enviado com sucesso!
+        ========================================
+        Para: {destinatario}
+        Assunto: {assunto}
+        Mensagem:
+        {mensagem}
+        ========================================
+        """
+    
+        # Grava no console sempre
+        print(mensagem_simulada)
+    
+        # Mostra popup apenas se explicitamente solicitado
+        if mostrar_popup:
+            messagebox.showinfo("E-mail Simulado", mensagem_simulada)
+    
+        return True
+        
     # ----------------------------------------------
     # Métodos de Relatórios
     # ----------------------------------------------
@@ -776,7 +824,12 @@ class App:
             Equipamento: {equipamento['nome']}
             Nova Data Devolução: {emprestimo['devolucao']}
             """
-            self.enviar_email(self.usuario_atual['email'], "Renovação de Empréstimo", mensagem)
+            self.enviar_email(
+                self.usuario_atual['email'],
+                "Renovação de Empréstimo",
+                mensagem,
+                mostrar_popup=True  # Popup habilitado aqui
+)
             
             messagebox.showinfo("Sucesso", "Empréstimo renovado com sucesso!")
             janela.destroy()
@@ -877,9 +930,12 @@ class App:
         {problema}
         """
         
-        if self.enviar_email("suporte@universidade.com", "Chamado de Suporte", mensagem):
-            messagebox.showinfo("Sucesso", "Chamado enviado com sucesso!")
-            janela.destroy()
+        self.enviar_email(
+            "suporte@universidade.com",
+            "Chamado de Suporte",
+            mensagem,
+            mostrar_popup=False  # Popup desabilitado
+)
 
 if __name__ == "__main__":
     root = tk.Tk()

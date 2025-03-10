@@ -6,5 +6,21 @@
     "quantidade": 4,
     "descricao": "",
     "disponivel": true
+  },
+  {
+    "id": 2,
+    "nome": "Banqueta",
+    "tipo": "A",
+    "quantidade": 2,
+    "descricao": "",
+    "disponivel": true
+  },
+  {
+    "id": 3,
+    "nome": "Tripé",
+    "tipo": "C",
+    "quantidade": 4,
+    "descricao": "",
+    "disponivel": true
   }
 ]

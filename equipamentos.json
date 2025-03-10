@@ -1,11 +1,20 @@
 [
   {
     "id": 1,
-    "nome": "Caixa de som",
-    "tipo": "C",
-    "quantidade": 5,
+    "nome": "Microfone",
+    "tipo": "A",
+    "quantidade": 2,
     "descricao": "",
-    "disponivel": false,
-    "manutencao": true
+    "disponivel": true,
+    "manutencao": false
+  },
+  {
+    "id": 2,
+    "nome": "Microfone",
+    "tipo": "A",
+    "quantidade": 3,
+    "descricao": "",
+    "disponivel": true,
+    "manutencao": false
   }
 ]
