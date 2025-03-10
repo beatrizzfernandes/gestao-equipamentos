@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "nome": "Caixa de som",
+    "tipo": "C",
+    "quantidade": 5,
+    "descricao": "",
+    "disponivel": false,
+    "manutencao": true
+  }
+]
