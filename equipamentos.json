@@ -5,8 +5,8 @@
     "tipo": "A",
     "quantidade": 2,
     "descricao": "",
-    "disponivel": true,
-    "manutencao": false
+    "disponivel": false,
+    "manutencao": true
   },
   {
     "id": 2,

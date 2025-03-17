@@ -6,5 +6,29 @@
     "data": "10/03/2025 16:51",
     "devolucao": "12/03/2025",
     "status": "cancelada"
+  },
+  {
+    "id": 2,
+    "equipamento_id": 1,
+    "usuario": "beatriz@gmail.com",
+    "data": "17/03/2025 19:13",
+    "devolucao": "18/03/2025",
+    "status": "cancelada"
+  },
+  {
+    "id": 3,
+    "equipamento_id": 1,
+    "usuario": "beatriz@gmail.com",
+    "data": "17/03/2025 19:14",
+    "devolucao": "17/03/2025",
+    "status": "cancelada"
+  },
+  {
+    "id": 4,
+    "equipamento_id": 1,
+    "usuario": "beatriz@gmail.com",
+    "data": "17/03/2025 19:15",
+    "devolucao": "14/03/2025",
+    "status": "reservado"
   }
 ]
